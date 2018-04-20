@@ -1,8 +1,8 @@
 __author__  = "LSST/Felipe Menanteau"
-__version__ = 'TEST'
+__version__ = '0.1.0'
 version = __version__
 
-#from . import hutils
-#from . import camera_coords
-#from .hutils import HDRTEMPL_SciCamera
-
+from .salpylib import DeviceState
+from .salpylib import DDSController
+from .salpylib import DDSSubcriber
+from .salpylib import DDSSend

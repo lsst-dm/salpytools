@@ -6,6 +6,7 @@ import logging
 import salpytools.states as states
 import inspect
 import copy
+import itertools
 
 """
 A Set of Python classes and tools to subscribe to LSST/SAL DDS topics using the ts_sal generated libraries.
