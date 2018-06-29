@@ -1,5 +1,5 @@
 __author__  = "LSST/Felipe Menanteau"
-__version__ = '0.1.0'
+__version__ = '0.2'
 version = __version__
 
 from .salpylib import DeviceState

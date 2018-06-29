@@ -111,6 +111,12 @@ class DeviceState:
             self.myData[eventname].commandValue = states.state_enumeration[next_state] # CHECK THIS OUT
             self.myData[eventname].detailedState = states.state_enumeration[self.current_state] 
 
+        if eventname == 'SettingsApplied':
+            try:
+                self.myData[eventname].settings = self.settings
+            except:
+                LOGGER.info("WARNING: Could not extract 'settings' from state to reply the 'SettingsApplied'")
+
         # Override from kwargs
         for key in kwargs:
             setattr(self.myData[eventname],key,kwargs.get(key))
