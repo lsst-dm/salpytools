@@ -67,7 +67,7 @@ class DeviceState:
     '''
 
     def __init__(self, Device='atHeaderService',default_state='OFFLINE',
-                 tsleep=0.5,
+                 tsleep=0.1,
                  eventlist = ['SummaryState',
                               'SettingVersions',
                               'RejectedCommand',
@@ -155,7 +155,7 @@ class DDSController(threading.Thread):
     that this one can send the acks to the Commands.
     '''
     
-    def __init__(self, command, module='atHeaderService', topic=None, threadID='1', tsleep=0.5, State=None):
+    def __init__(self, command, module='atHeaderService', topic=None, threadID='Controller', tsleep=0.1, State=None):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.module = module
@@ -257,7 +257,7 @@ class DDSSubcriber(threading.Thread):
 
     ''' Class to Subscribe to Telemetry, it could a Command (discouraged), Event or Telemetry'''
 
-    def __init__(self, Device, topic, threadID='1', Stype='Telemetry',tsleep=0.01,timeout=3600,nkeep=100):
+    def __init__(self, Device, topic, threadID='1', Stype='Telemetry',tsleep=0.1,timeout=3600,nkeep=100):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.Device = Device
@@ -562,7 +562,7 @@ def command_sequencer(commands,Device='atHeaderService',wait_time=1, sleep_time=
         issueCommand[cmd] = getattr(mgr,'issueCommand_{}'.format(cmd))
         waitForCompletion[cmd] = getattr(mgr,'waitForCompletion_{}'.format(cmd))
         # If Start we send some non-sense value
-        if cmd == 'Start':
+        if cmd == 'start':
             myData[cmd].configure = 'blah.json'
         
     for cmd in commands:
@@ -572,6 +572,9 @@ def command_sequencer(commands,Device='atHeaderService',wait_time=1, sleep_time=
         waitForCompletion[cmd](cmdId,wait_time)
         LOGGER.info("Done: {}".format(cmd)) 
         time.sleep(sleep_time)
+
+    mgr.salShutdown()
+
 
     return
 
