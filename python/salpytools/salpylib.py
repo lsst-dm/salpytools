@@ -223,7 +223,7 @@ class DDSController(threading.Thread):
             self.State.current_state = self.next_state
 
             if self.COMMAND == 'ENTERCONTROL':
-                self.State.send_logEvent("SettingVersions",recommendedSettingsVersion='blah')
+                self.State.send_logEvent("SettingVersions",recommendedSettingsVersion='normal')
                 self.State.send_logEvent('SummaryState')
             elif self.COMMAND == 'START':
                 # Extract 'myData.configure' for START, eventually we
@@ -563,7 +563,7 @@ def command_sequencer(commands,Device='atHeaderService',wait_time=1, sleep_time=
         waitForCompletion[cmd] = getattr(mgr,'waitForCompletion_{}'.format(cmd))
         # If Start we send some non-sense value
         if cmd == 'start' or cmd == 'Start':
-            myData[cmd].configure = 'blah.json'
+            myData[cmd].configure = 'normal'
         
     for cmd in commands:
         LOGGER.info("Issuing command: {}".format(cmd)) 
