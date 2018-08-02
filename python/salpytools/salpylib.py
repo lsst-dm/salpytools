@@ -9,13 +9,18 @@ import copy
 import itertools
 
 """
-A Set of Python classes and tools to subscribe to LSST/SAL DDS topics using the ts_sal generated libraries.
-The the Main classes in the module are:
+A Set of Python classes and tools to subscribe to LSST/SAL DDS topics
+using the ts_sal generated libraries.  The the Main classes in the
+module are:
 
-- DDSController:  Subscribe and acknowleges Commands for a Device (threaded)
-- DDSSubcriber: Subscribe to Command/Telemetry/Event topics for a Device (threaded)
-- DDSSend: Generates/send Telemetry, Events or Commands for a Device (non-threaded)
-- DeviceState: Class Used by DDSController to store the state of the Commandable-Component/Device
+- DDSController: Subscribe and acknowleges Commands for a Device
+  (threaded)
+- DDSSubcriber: Subscribe to Command/Telemetry/Event topics for a
+  Device (threaded)
+- DDSSend: Generates/send Telemetry, Events or Commands for a Device
+  (non-threaded)
+- DeviceState: Class Used by DDSController to store the state of the
+  Commandable-Component/Device
 
 """
 
@@ -23,7 +28,8 @@ The the Main classes in the module are:
 # - Control devices
 # - Gather telemetry/events
 # - Send Control commands (to sim OCS)
-# NOTE: all import of SALPY_{moduleName} are done on the fly using the fuction load_SALPYlib()
+# NOTE: all import of SALPY_{moduleName} are done on the fly using the
+# fuction load_SALPYlib()
 
 
 SAL__CMD_COMPLETE=303
@@ -50,7 +56,7 @@ def load_SALPYlib(Device):
         return SALPY_lib
     except:
         LOGGER.info('importing SALPY_{}'.format(Device))
-        exec "import SALPY_{}".format(Device)
+        exec("import SALPY_{}".format(Device))
     else:
         raise ValueError("import SALPY_{}: failed".format(Device))
     SALPY_lib = locals()['SALPY_{}'.format(Device)]
@@ -380,7 +386,7 @@ class DDSSubcriber(threading.Thread):
         t0 =  time.time()
         while not self.newEvent:
             sys.stdout.flush()
-            sys.stdout.write("Wating for %s event.. [%s]" % (self.topic, spinner.next()))
+            sys.stdout.write("Wating for %s event.. [%s]" % (self.topic, next(spinner)))
             sys.stdout.write('\r') 
             if time.time() - t0 > timeout:
                 LOGGER.info("WARNING: Timeout reading for Event %s" % self.topic)
