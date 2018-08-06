@@ -7,6 +7,7 @@ import salpytools.states as states
 import inspect
 import copy
 import itertools
+import importlib
 
 """
 A Set of Python classes and tools to subscribe to LSST/SAL DDS topics
@@ -56,11 +57,10 @@ def load_SALPYlib(Device):
         return SALPY_lib
     except:
         LOGGER.info('importing SALPY_{}'.format(Device))
-        exec("import SALPY_{}".format(Device))
+        SALPY_lib = importlib.import_module("SALPY_{}".format(Device))
     else:
         raise ValueError("import SALPY_{}: failed".format(Device))
-    SALPY_lib = locals()['SALPY_{}'.format(Device)]
-    # Update to make it visible elsewhere -- not sure if this works
+    # Update to make it visible elsewhere 
     globals()['SALPY_{}'.format(Device)] = SALPY_lib
     return SALPY_lib
 
