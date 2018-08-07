@@ -33,7 +33,7 @@ module are:
 # fuction load_SALPYlib()
 
 
-SAL__CMD_COMPLETE=303
+#SAL__CMD_COMPLETE=303
 spinner = itertools.cycle(['-', '/', '|', '\\'])
 
 def create_logger(level=logging.NOTSET,name='default'):
@@ -45,7 +45,7 @@ def create_logger(level=logging.NOTSET,name='default'):
     return logger
 
 # Create a logger for all functions
-LOGGER = create_logger(level=logging.NOTSET,name='HEADERSERVICE')
+LOGGER = create_logger(level=logging.NOTSET,name='SALPYLIB')
 
 def load_SALPYlib(Device):
     '''Trick to import modules dynamically as needed/depending on the Device we want'''
@@ -74,11 +74,11 @@ class DeviceState:
 
     def __init__(self, Device='atHeaderService',default_state='OFFLINE',
                  tsleep=0.5,
-                 eventlist = ['SummaryState',
-                              'SettingVersions',
-                              'RejectedCommand',
-                              'SettingsApplied',
-                              'AppliedSettingsMatchStart'] ):
+                 eventlist = ['summaryState',
+                              'settingVersions',
+                              'rejectedCommand',
+                              'settingsApplied',
+                              'appliedSettingsMatchStart'] ):
 
         self.current_state = default_state
         self.tsleep = tsleep
@@ -104,28 +104,30 @@ class DeviceState:
     def send_logEvent(self,eventname,**kwargs):
         ''' Send logevent for an eventname'''
         # Populate myData object for keys across logevent
-        self.myData[eventname].timestamp = kwargs.pop('timestamp',time.time())
-        self.myData[eventname].priority  = kwargs.pop('priority',1)
+        kwargs.setdefault('timestamp',self.mgr[eventname].getCurrentTime())
+        kwargs.setdefault('priority',1)
+        #self.myData[eventname].timestamp = kwargs.pop('timestamp',self.mgr.getCurrentTime())
+        #self.myData[eventname].priority  = kwargs.pop('priority',1)
         priority = int(self.myData[eventname].priority)
 
         # Populate myData with the default cases
-        if eventname == 'SummaryState':
+        if eventname == 'summaryState':
             self.myData[eventname].summaryState = states.state_enumeration[self.current_state] 
-        if eventname == 'RejectedCommand':
+        if eventname == 'rejectedCommand':
             rejected_state = kwargs.get('rejected_state')
             next_state = states.next_state[rejected_state]
             self.myData[eventname].commandValue = states.state_enumeration[next_state] # CHECK THIS OUT
             self.myData[eventname].detailedState = states.state_enumeration[self.current_state] 
 
-        if eventname == 'SettingsApplied':
+        if eventname == 'settingsApplied':
             try:
                 self.myData[eventname].settings = self.settings
             except:
-                LOGGER.info("WARNING: Could not extract 'settings' from state to reply the 'SettingsApplied'")
+                LOGGER.info("WARNING: Could not extract 'settings' from state to reply the 'settingsApplied'")
 
         # Override from kwargs
-        for key in kwargs:
-            setattr(self.myData[eventname],key,kwargs.get(key))
+        LOGGER.info('Updating myData object with kwargs')
+        self.myData[eventname] = update_myData(self.myData[eventname],**kwargs)
 
         LOGGER.info('Sending {}'.format(eventname))
         self.logEvent[eventname](self.myData[eventname], priority)
@@ -207,6 +209,8 @@ class DDSController(threading.Thread):
         # mgr.ackCommand_EnterControl
         self.mgr_acceptCommand = getattr(self.mgr,'acceptCommand_{}'.format(self.command))
         self.mgr_ackCommand = getattr(self.mgr,'ackCommand_{}'.format(self.command))
+        # And the code for the SAL__CMD_COMPLETE from the library itself
+        self.SAL__CMD_COMPLETE = SALPY_lib.SAL__CMD_COMPLETE
 
     def run(self):
         self.run_command()
@@ -224,23 +228,30 @@ class DDSController(threading.Thread):
         # Check if valid transition
         if validate_transition(self.State.current_state, self.next_state):
             # Send the ACK
-            self.mgr_ackCommand(cmdId, SAL__CMD_COMPLETE, 0, "Done : OK");
+            self.mgr_ackCommand(cmdId, self.SAL__CMD_COMPLETE, 0, "Done : OK");
             # Update the current state
             self.State.current_state = self.next_state
 
             if self.COMMAND == 'ENTERCONTROL':
-                self.State.send_logEvent("SettingVersions",recommendedSettingsVersion='normal')
-                self.State.send_logEvent('SummaryState')
+                self.State.send_logEvent("settingVersions",recommendedSettingsVersion='normal')
+                self.State.send_logEvent('summaryState')
             elif self.COMMAND == 'START':
-                # Extract 'myData.configure' for START, eventually we
-                # will apply the setting for this configuration, for now we
-                LOGGER.info("From {} received configure: {}".format(self.COMMAND,self.myData.configure))
+                # TODO: use either 'myData.configure' or
+                # 'myData.settingsToApply'. The XML keeps changing
+                # 
+                # Here we extract 'myData.configure' or
+                # 'myData.settingsToApply' for START, eventually we
+                # will apply the setting for this configuration.
+                try:
+                    LOGGER.info("From {} received configure: {}".format(self.COMMAND,self.myData.configure))
+                except:
+                    LOGGER.info("From {} received configure: {}".format(self.COMMAND,self.myData.settingsToApply))
                 # Here we should apply the setting in the future
-                self.State.send_logEvent('SettingsApplied')
-                self.State.send_logEvent('AppliedSettingsMatchStart',appliedSettingsMatchStartIsTrue=1)
-                self.State.send_logEvent('SummaryState')
+                self.State.send_logEvent('settingsApplied')
+                self.State.send_logEvent('appliedSettingsMatchStart',appliedSettingsMatchStartIsTrue=1)
+                self.State.send_logEvent('summaryState')
             else:
-                self.State.send_logEvent('SummaryState')
+                self.State.send_logEvent('summaryState')
         else:
             LOGGER.info("WARNING: INVALID TRANSITION from {} --> {}".format(self.State.current_state, self.next_state))
             self.State.send_logEvent('RejectedCommand',rejected_state=self.COMMAND)
@@ -419,6 +430,8 @@ class DDSSend(threading.Thread):
         LOGGER.info("Loading Device: {}".format(self.Device)) 
         # Load SALPY_lib into the class
         self.SALPY_lib = load_SALPYlib(self.Device)
+        # And the code for the SAL__CMD_COMPLETE from the library itself
+        self.SAL__CMD_COMPLETE = self.SALPY_lib.SAL__CMD_COMPLETE
 
     def run(self):
         ''' Function for threading'''
@@ -442,7 +455,7 @@ class DDSSend(threading.Thread):
         # Get the myData object
         myData = getattr(self.SALPY_lib,'{}_command_{}C'.format(self.Device,cmd))()
         LOGGER.info('Updating myData object with kwargs')
-        myData = self.update_myData(myData,**kwargs)
+        myData = update_myData(myData,**kwargs)
         # Make it visible outside
         self.myData = myData
         self.cmd    = cmd
@@ -473,7 +486,7 @@ class DDSSend(threading.Thread):
         mgr = self.get_mgr()
         mgr.salProcessor("{}_command_{}".format(self.Device,cmd))
         ackCommand = getattr(mgr,'ackCommand_{}'.format(cmd))
-        ackCommand(cmdId, SAL__CMD_COMPLETE, 0, "Done : OK");
+        ackCommand(cmdId, self.SAL__CMD_COMPLETE, 0, "Done : OK");
 
     def acceptCommand(self,cmd):
         mgr = self.get_mgr()
@@ -497,7 +510,7 @@ class DDSSend(threading.Thread):
 
         myData = getattr(self.SALPY_lib,'{}_logevent_{}C'.format(self.Device,event))()
         LOGGER.info('Updating myData object with kwargs')
-        myData = self.update_myData(myData,**kwargs)
+        myData = update_myData(myData,**kwargs)
         # Make it visible outside
         self.myData = myData
         # Get the logEvent object to send myData
@@ -517,7 +530,7 @@ class DDSSend(threading.Thread):
         # Get the myData object
         myData = getattr(self.SALPY_lib,'{}_{}C'.format(self.Device,topic))()
         LOGGER.info('Updating myData object with kwargs')
-        myData = self.update_myData(myData,**kwargs)
+        myData = update_myData(myData,**kwargs)
         # Make it visible outside
         self.myData = myData
         # Get the Telemetry object to send myData
@@ -529,16 +542,16 @@ class DDSSend(threading.Thread):
         LOGGER.info("Done: {}".format(topic)) 
         time.sleep(sleeptime)
 
-    @staticmethod
-    def update_myData(myData,**kwargs):
-        """ Updating myData with kwargs """
-        myData_keys = [a[0] for a in inspect.getmembers(myData) if not(a[0].startswith('__') and a[0].endswith('__'))]
-        for key in kwargs:
-            if key in myData_keys:
-                setattr(myData,key,kwargs.get(key))
-            else:
-                LOGGER.info('key {} not in myData'.format(key))
-        return myData
+    #@staticmethod
+    #def update_myData(myData,**kwargs):
+    #    """ Updating myData with kwargs """
+    #    myData_keys = [a[0] for a in inspect.getmembers(myData) if not(a[0].startswith('__') and a[0].endswith('__'))]
+    #    for key in kwargs:
+    #        if key in myData_keys:
+    #            setattr(myData,key,kwargs.get(key))
+    #        else:
+    #            LOGGER.info('key {} not in myData'.format(key))
+    #    return myData
 
     def get_myData(self):
         """ Make a dictionary representation of the myData C objects"""
@@ -547,6 +560,19 @@ class DDSSend(threading.Thread):
         for key in myData_keys:
             myData_dic[key] =  getattr(self.myData,key)
         return myData_dic
+
+
+def update_myData(myData,**kwargs):
+    """ Updating myData with kwargs """
+    myData_keys = [a[0] for a in inspect.getmembers(myData) if not(a[0].startswith('__') and a[0].endswith('__'))]
+    for key in kwargs:
+        if key in myData_keys:
+            setattr(myData,key,kwargs.get(key))
+        else:
+            LOGGER.info('key {} not in myData'.format(key))
+    #print (myData)
+    #exit()
+    return myData
     
 def command_sequencer(commands,Device='atHeaderService',wait_time=1, sleep_time=3):
 
@@ -569,7 +595,7 @@ def command_sequencer(commands,Device='atHeaderService',wait_time=1, sleep_time=
         waitForCompletion[cmd] = getattr(mgr,'waitForCompletion_{}'.format(cmd))
         # If Start we send some non-sense value
         if cmd == 'start' or cmd == 'Start':
-            myData[cmd].configure = 'normal'
+            myData[cmd].settingsToApply = 'normal'
         
     for cmd in commands:
         LOGGER.info("Issuing command: {}".format(cmd)) 
