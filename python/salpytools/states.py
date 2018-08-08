@@ -5,34 +5,36 @@ https://github.com/lsst/ctrl_iip/blob/master/python/lsst/iip/toolsmod.py
 '''
 
 ########
-# Dictionary showing the state a transition ends in
+# Dictionary showing the state a transition ends from command
+# Note that ENABLE is the command and ENABLED is the resulting state
+# Note that DISABLE is the command and DISABLED is the resulting state
 next_state = {}
 next_state["ENTER_CONTROL"] = "STANDBY"
 next_state["EXIT_CONTROL"] = "OFFLINE"
-next_state["START"] = "DISABLE"
-next_state["ENABLE"] = "ENABLE"
-next_state["DISABLE"] = "DISABLE"
+next_state["START"] = "DISABLED"
+next_state["ENABLE"] = "ENABLED"
+next_state["DISABLE"] = "DISABLED"
 next_state["STANDBY"] = "STANDBY"
-next_state["SET_VALUE"] = "ENABLE"
-next_state["ABORT"] = "DISABLE"
-next_state["STOP"] = "DISABLE"
+next_state["SET_VALUE"] = "ENABLED"
+next_state["ABORT"] = "DISABLED"
+next_state["STOP"] = "DISABLED"
 # Aliases
 next_state["ENTERCONTROL"] = next_state["ENTER_CONTROL"] 
 next_state["EXITCONTROL"] = next_state["EXIT_CONTROL"] 
 
+state_names = ['DISABLED',
+               'ENABLED',
+               'FAULT',
+               'OFFLINE',
+               'STANDBY']
 
-summary_state_enum = {'DISABLE':0,
-                      'ENABLE':1, 
-                      'FAULT':2, 
-                      'OFFLINE':3, 
-                      'STANDBY':4}
 
 state_enumeration = {}
 state_enumeration["OFFLINE"] = 0
 state_enumeration["STANDBY"] = 1
-state_enumeration["DISABLE"] = 2
-state_enumeration["ENABLE"] =  3
-state_enumeration["FAULT"] =   4
+state_enumeration["DISABLED"] = 2
+state_enumeration["ENABLED"] = 3
+state_enumeration["FAULT"]   = 4
 state_enumeration["INITIAL"] = 5
 state_enumeration["FINAL"] =   6
 

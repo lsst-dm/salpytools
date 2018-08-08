@@ -91,6 +91,26 @@ class DeviceState:
         self.SALPY_lib = load_SALPYlib(self.Device)
         # Subscribe to all events in list
         self.subscribe_list(eventlist)
+        # Get the enumeration of the states from the library
+        self.load_state_enumeration()
+
+    def load_state_enumeration(self):
+
+        """
+        Load up into dictionaries the SummaryState and DetailedState
+        enumeration by getting the attributes of the shape
+        'atHeaderService_shared_SummaryState_DisabledState' and
+        'atHeaderService_shared_DetailedState_DisabledState' for example
+        """
+
+        LOGGER.info('Loading up the SummaryState and DetailedState enumerations for {}'.format(self.Device))
+        self.summaryState_enum = {}
+        self.detailedState_enum = {}
+        for name in states.state_names:
+            self.summaryState_enum[name] = getattr(self.SALPY_lib,
+                                                   "{}_shared_SummaryState_{}State".format(self.Device,name.capitalize()))
+            self.detailedState_enum[name] = getattr(self.SALPY_lib,
+                                                    "{}_shared_DetailedState_{}State".format(self.Device,name.capitalize()))
 
     def subscribe_list(self,eventlist):
         # Subscribe to list of logEvents
@@ -106,18 +126,16 @@ class DeviceState:
         # Populate myData object for keys across logevent
         kwargs.setdefault('timestamp',self.mgr[eventname].getCurrentTime())
         kwargs.setdefault('priority',1)
-        #self.myData[eventname].timestamp = kwargs.pop('timestamp',self.mgr.getCurrentTime())
-        #self.myData[eventname].priority  = kwargs.pop('priority',1)
         priority = int(self.myData[eventname].priority)
 
         # Populate myData with the default cases
         if eventname == 'summaryState':
-            self.myData[eventname].summaryState = states.state_enumeration[self.current_state] 
+            self.myData[eventname].summaryState = self.summaryState_enum[self.current_state]
         if eventname == 'rejectedCommand':
             rejected_state = kwargs.get('rejected_state')
             next_state = states.next_state[rejected_state]
             self.myData[eventname].commandValue = states.state_enumeration[next_state] # CHECK THIS OUT
-            self.myData[eventname].detailedState = states.state_enumeration[self.current_state] 
+            self.myData[eventname].detailedState = self.detailedState_enum[self.current_state]
 
         if eventname == 'settingsApplied':
             try:
@@ -125,7 +143,7 @@ class DeviceState:
             except:
                 LOGGER.info("WARNING: Could not extract 'settings' from state to reply the 'settingsApplied'")
 
-        # Override from kwargs
+        # Update myData from kwargs dict
         LOGGER.info('Updating myData object with kwargs')
         self.myData[eventname] = update_myData(self.myData[eventname],**kwargs)
 
@@ -254,7 +272,7 @@ class DDSController(threading.Thread):
                 self.State.send_logEvent('summaryState')
         else:
             LOGGER.info("WARNING: INVALID TRANSITION from {} --> {}".format(self.State.current_state, self.next_state))
-            self.State.send_logEvent('RejectedCommand',rejected_state=self.COMMAND)
+            self.State.send_logEvent('rejectedCommand',rejected_state=self.COMMAND)
 
 def validate_transition(current_state, new_state):
     """
