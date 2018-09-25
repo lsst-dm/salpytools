@@ -28,16 +28,16 @@ module are:
 # - Control devices
 # - Gather telemetry/events
 # - Send Control commands (to sim OCS)
-# NOTE: all import of SALPY_{moduleName} are done on the fly using the
-# fuction load_SALPYlib()
+# NOTE1: all import of SALPY_{moduleName} are done on the fly using the
+# function load_SALPYlib()
+# NOTE2: the error codes, such as SAL__CMD_COMPLETE=303 for example are load
+# directly from the SALPY_lib object (i.e.: SALPY_lib.SAL__CMD_COMPLETE).
 
-
-# SAL__CMD_COMPLETE=303
 spinner = itertools.cycle(['-', '/', '|', '\\'])
 
 
 def create_logger(level=logging.NOTSET, name='default'):
-    ''' Simple Logger '''
+    """ Simple Logger """
     logging.basicConfig(level=level,
                         format='[%(asctime)s] [%(levelname)s] %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
@@ -50,7 +50,7 @@ LOGGER = create_logger(level=logging.NOTSET, name='SALPYLIB')
 
 
 def load_SALPYlib(Device):
-    '''Trick to import modules dynamically as needed/depending on the Device we want'''
+    """Trick to import modules dynamically as needed/depending on the Device we want"""
 
     # Make sure is not already loaded i.e. visible in globals
     try:
@@ -69,11 +69,11 @@ def load_SALPYlib(Device):
 
 class DeviceState:
 
-    '''
+    """
     A Class to store the SCS (a.k.a Device). For now this is very
     rudimentary and written mostly to fullfil the needs of the
     HeaderService
-    '''
+    """
 
     def __init__(self, Device='atHeaderService', default_state='OFFLINE',
                  tsleep=0.5,
@@ -124,7 +124,7 @@ class DeviceState:
             self.subscribe_logEvent(eventname)
 
     def send_logEvent(self, eventname, **kwargs):
-        ''' Send logevent for an eventname'''
+        """Send logevent for an eventname"""
         # Populate myData object for keys across logevent
         kwargs.setdefault('timestamp', self.mgr[eventname].getCurrentTime())
         kwargs.setdefault('priority', 1)
@@ -136,7 +136,7 @@ class DeviceState:
         if eventname == 'rejectedCommand':
             rejected_state = kwargs.get('rejected_state')
             next_state = states.next_state[rejected_state]
-            # CHECK THIS OUT
+            # CHECK THIS OUT -- DM-15860
             self.myData[eventname].commandValue = states.state_enumeration[next_state]
             self.myData[eventname].detailedState = self.detailedState_enum[self.current_state]
 
@@ -160,10 +160,10 @@ class DeviceState:
         return True
 
     def subscribe_logEvent(self, eventname):
-        '''
+        """
         Create a subscription for the {Device}_logevent_{eventnname}
         This step need to be done before we call send_logEvent
-        '''
+        """
         self.mgr[eventname] = getattr(self.SALPY_lib, 'SAL_{}'.format(self.Device))()
         self.mgr[eventname].salEvent("{}_logevent_{}".format(self.Device, eventname))
         self.logEvent[eventname] = getattr(self.mgr[eventname], 'logEvent_{}'.format(eventname))
@@ -175,17 +175,17 @@ class DeviceState:
         LOGGER.info('Initializing: {}_logevent_{}'.format(self.Device, eventname))
 
     def get_current_state(self):
-        '''Function to get the current state'''
+        """Function to get the current state"""
         return self.current_state
 
 
 class DDSController(threading.Thread):
 
-    '''
+    """
     Class to subscribe and react to Commands for a Device.
     This class is very similar to DDSSubcriber, but the difference is
     that this one can send the acks to the Commands.
-    '''
+    """
 
     def __init__(self, command, module='atHeaderService', topic=None, threadID='1', tsleep=0.5, State=None):
         threading.Thread.__init__(self)
@@ -302,7 +302,7 @@ def validate_transition(current_state, new_state):
 
 class DDSSubcriber(threading.Thread):
 
-    ''' Class to Subscribe to Telemetry, it could a Command (discouraged), Event or Telemetry'''
+    """ Class to Subscribe to Telemetry, it could a Command (discouraged), Event or Telemetry"""
 
     def __init__(self, Device, topic, threadID='1', Stype='Telemetry', tsleep=0.01, timeout=3600, nkeep=100):
         threading.Thread.__init__(self)
@@ -356,7 +356,7 @@ class DDSSubcriber(threading.Thread):
                 self.Stype, self.Device, self.topic))
 
     def run(self):
-        ''' The run method for the threading'''
+        """ The run method for the threading"""
         self.myDatalist = []
         if self.Stype == 'Telemetry':
             self.newTelem = False
@@ -442,18 +442,18 @@ class DDSSubcriber(threading.Thread):
         return self.newEvent
 
     def resetEvent(self):
-        ''' Simple function to set it back'''
+        """ Simple function to set it back"""
         self.newEvent = False
 
 
 class DDSSend(threading.Thread):
 
-    '''
+    """
     Class to generate/send Telemetry, Events or Commands.
     In the case of a command, the class instance cannot be
     re-used.
     For Events/Telemetry, the same object can be re-used for a given Device,
-    '''
+    """
 
     def __init__(self, Device, sleeptime=1, timeout=5, threadID=1):
         threading.Thread.__init__(self)
@@ -469,7 +469,7 @@ class DDSSend(threading.Thread):
         self.SAL__CMD_COMPLETE = self.SALPY_lib.SAL__CMD_COMPLETE
 
     def run(self):
-        ''' Function for threading'''
+        """ Function for threading"""
         self.waitForCompletion_Command()
 
     def get_mgr(self):
@@ -479,7 +479,7 @@ class DDSSend(threading.Thread):
         return mgr
 
     def send_Command(self, cmd, **kwargs):
-        ''' Send a Command to a Device'''
+        """ Send a Command to a Device"""
         timeout = int(kwargs.pop('timeout', self.timeout))
         # sleeptime = kwargs.pop('sleeptime', self.sleeptime)
         wait_command = kwargs.pop('wait_command', False)
@@ -539,7 +539,7 @@ class DDSSend(threading.Thread):
         return cmdId
 
     def send_Event(self, event, **kwargs):
-        ''' Send an Event from a Device'''
+        """ Send an Event from a Device"""
 
         sleeptime = kwargs.pop('sleep_time', self.sleeptime)
         priority = kwargs.get('priority', 1)
@@ -560,7 +560,7 @@ class DDSSend(threading.Thread):
         time.sleep(sleeptime)
 
     def send_Telemetry(self, topic, **kwargs):
-        ''' Send an Telemetry from a Device'''
+        """ Send an Telemetry from a Device"""
 
         sleeptime = kwargs.pop('sleep_time', self.sleeptime)
         # Get the myData object
@@ -578,17 +578,6 @@ class DDSSend(threading.Thread):
         LOGGER.info("Done: {}".format(topic))
         time.sleep(sleeptime)
 
-    # @staticmethod
-    # def update_myData(myData,**kwargs):
-    #    """ Updating myData with kwargs """
-    #    myData_keys = [a[0] for a in inspect.getmembers(myData) \
-    #                  if not(a[0].startswith('__') and a[0].endswith('__'))]
-    #    for key in kwargs:
-    #        if key in myData_keys:
-    #            setattr(myData,key,kwargs.get(key))
-    #        else:
-    #            LOGGER.info('key {} not in myData'.format(key))
-    #    return myData
 
     def get_myData(self):
         """ Make a dictionary representation of the myData C objects"""
