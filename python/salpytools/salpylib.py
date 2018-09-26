@@ -634,3 +634,16 @@ def command_sequencer(commands, Device='atHeaderService', wait_time=1, sleep_tim
 
     mgr.salShutdown()
     return
+
+
+def purge_command(device, command, sleep=0.5):
+
+    SALPY_lib = load_SALPYlib(device)
+    mgr = getattr(SALPY_lib, 'SAL_{}'.format(device))()
+    mgr.salProcessor("{}_command_{}".format(device, command))
+    LOGGER.info("Subscribing to: {}_command_{}".format(device, command))
+    time.sleep(sleep)
+    mgr.salShutdown()
+    LOGGER.info("Purged: {}".format(command))
+    LOGGER.info("--------------------------")
+    return
