@@ -1,4 +1,3 @@
-
 import time
 import sys
 import threading
@@ -28,10 +27,8 @@ module are:
 # - Control devices
 # - Gather telemetry/events
 # - Send Control commands (to sim OCS)
-# NOTE1: all import of SALPY_{moduleName} are done on the fly using the
+# NOTE: all import of SALPY_{moduleName} are done on the fly using the
 # function load_SALPYlib()
-# NOTE2: the error codes, such as SAL__CMD_COMPLETE=303 for example are load
-# directly from the SALPY_lib object (i.e.: SALPY_lib.SAL__CMD_COMPLETE).
 
 spinner = itertools.cycle(['-', '/', '|', '\\'])
 
@@ -187,15 +184,15 @@ class DDSController(threading.Thread):
     that this one can send the acks to the Commands.
     """
 
-    def __init__(self, command, module='atHeaderService', topic=None, threadID='1', tsleep=0.5, State=None):
+    def __init__(self, command, Device='atHeaderService', topic=None, threadID='1', tsleep=0.5, State=None):
         threading.Thread.__init__(self)
         self.threadID = threadID
-        self.module = module
+        self.Device = Device
         self.command = command
         self.COMMAND = self.command.upper()
         # The topic:
         if not topic:
-            self.topic = "{}_command_{}".format(module, command)
+            self.topic = "{}_command_{}".format(Device, command)
         else:
             self.topic = topic
         self.tsleep = tsleep
@@ -221,20 +218,18 @@ class DDSController(threading.Thread):
 
         self.newControl = False
 
-        # Get the mgr
-        SALPY_lib = globals()['SALPY_{}'.format(self.module)]
-        self.mgr = getattr(SALPY_lib, 'SAL_{}'.format(self.module))()
+        # Load (if not in globals already) SALPY_{deviceName} into class
+        self.SALPY_lib = load_SALPYlib(self.Device)
+        self.mgr = getattr(self.SALPY_lib, 'SAL_{}'.format(self.Device))()
         self.mgr.salProcessor(self.topic)
-        self.myData = getattr(SALPY_lib, self.topic+'C')()
-        LOGGER.info("{} controller ready for topic: {}".format(self.module, self.topic))
+        self.myData = getattr(self.SALPY_lib, self.topic+'C')()
+        LOGGER.info("{} controller ready for topic: {}".format(self.Device, self.topic))
 
         # We use getattr to get the equivalent of for our accept and ack command
         # mgr.acceptCommand_EnterControl()
         # mgr.ackCommand_EnterControl
         self.mgr_acceptCommand = getattr(self.mgr, 'acceptCommand_{}'.format(self.command))
         self.mgr_ackCommand = getattr(self.mgr, 'ackCommand_{}'.format(self.command))
-        # And the code for the SAL__CMD_COMPLETE from the library itself
-        self.SAL__CMD_COMPLETE = SALPY_lib.SAL__CMD_COMPLETE
 
     def run(self):
         self.run_command()
@@ -252,7 +247,9 @@ class DDSController(threading.Thread):
         # Check if valid transition
         if validate_transition(self.State.current_state, self.next_state):
             # Send the ACK
-            self.mgr_ackCommand(cmdId, self.SAL__CMD_COMPLETE, 0, "Done : OK")
+            msg = "Successful transition from: {} --> {}".format(self.State.current_state,
+                                                                 self.next_state)
+            self.mgr_ackCommand(cmdId, self.SALPY_lib.SAL__CMD_COMPLETE, 0, msg)
             # Update the current state
             self.State.current_state = self.next_state
 
@@ -280,10 +277,11 @@ class DDSController(threading.Thread):
             else:
                 self.State.send_logEvent('summaryState')
         else:
-            LOGGER.info(
-                "WARNING: INVALID TRANSITION from {} --> {}".format(self.State.current_state,
-                                                                    self.next_state))
-            self.State.send_logEvent('rejectedCommand', rejected_state=self.COMMAND)
+            msg = "WARNING: Invalid Transition from: {} --> {}".format(self.State.current_state,
+                                                                       self.next_state)
+            LOGGER.info(msg)
+            # Send the ACK
+            self.mgr_ackCommand(cmdId, self.SALPY_lib.SAL__CMD_NOPERM, 0, msg)
 
 
 def validate_transition(current_state, new_state):
@@ -294,9 +292,9 @@ def validate_transition(current_state, new_state):
     new_index = states.state_enumeration[new_state]
     transition_is_valid = states.state_matrix[current_index][new_index]
     if transition_is_valid:
-        LOGGER.info("Transition from {} --> {} is VALID".format(current_state, new_state))
+        LOGGER.info("Transition from: {} --> {} is VALID".format(current_state, new_state))
     else:
-        LOGGER.info("Transition from {} --> {} is INVALID".format(current_state, new_state))
+        LOGGER.info("Transition from: {} --> {} is INVALID".format(current_state, new_state))
     return transition_is_valid
 
 
@@ -465,8 +463,6 @@ class DDSSend(threading.Thread):
         LOGGER.info("Loading Device: {}".format(self.Device))
         # Load SALPY_lib into the class
         self.SALPY_lib = load_SALPYlib(self.Device)
-        # And the code for the SAL__CMD_COMPLETE from the library itself
-        self.SAL__CMD_COMPLETE = self.SALPY_lib.SAL__CMD_COMPLETE
 
     def run(self):
         """ Function for threading"""
@@ -516,13 +512,19 @@ class DDSSend(threading.Thread):
         LOGGER.info("Done: {}".format(self.cmd))
         return retval
 
-    def ackCommand(self, cmd, cmdId):
+    def ackCommand(self, cmd, cmdId, ack=None, msg=None):
         """ Just send the ACK for a command, it need the cmdId as input"""
+
+        # Assume ack is OK unless otherwise stated
+        if not ack:
+            ack = self.SALPY_lib.SAL__CMD_COMPLETE
+        if not msg:
+            msg = "Done : OK"
         LOGGER.info("Sending ACK for Id: {} for Command: {}".format(cmdId, cmd))
         mgr = self.get_mgr()
         mgr.salProcessor("{}_command_{}".format(self.Device, cmd))
         ackCommand = getattr(mgr, 'ackCommand_{}'.format(cmd))
-        ackCommand(cmdId, self.SAL__CMD_COMPLETE, 0, "Done : OK")
+        ackCommand(cmdId, ack, 0, msg)
 
     def acceptCommand(self, cmd):
         mgr = self.get_mgr()
@@ -578,7 +580,6 @@ class DDSSend(threading.Thread):
         LOGGER.info("Done: {}".format(topic))
         time.sleep(sleeptime)
 
-
     def get_myData(self):
         """ Make a dictionary representation of the myData C objects"""
         myData_dic = {}
@@ -598,7 +599,7 @@ def update_myData(myData, **kwargs):
             setattr(myData, key, kwargs.get(key))
         else:
             LOGGER.info('key {} not in myData'.format(key))
-    # print (myData)
+    # print(myData)
     return myData
 
 
@@ -628,7 +629,10 @@ def command_sequencer(commands, Device='atHeaderService', wait_time=1, sleep_tim
         LOGGER.info("Issuing command: {}".format(cmd))
         LOGGER.info("Wait for Completion: {}".format(cmd))
         cmdId = issueCommand[cmd](myData[cmd])
-        waitForCompletion[cmd](cmdId, wait_time)
+        retval = waitForCompletion[cmd](cmdId, wait_time)
+        # Report if timed out and get the proper code
+        if retval == SALPY_lib.SAL__CMD_NOACK:
+            LOGGER.info("Command: {} timed out".format(cmd))
         LOGGER.info("Done: {}".format(cmd))
         time.sleep(sleep_time)
 
