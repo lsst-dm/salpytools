@@ -141,8 +141,8 @@ class DeviceState:
             try:
                 self.myData[eventname].settings = self.settings
             except Exception:
-                LOGGER.info(
-                    "WARNING: Could not extract 'settings' from state to reply the 'settingsApplied'")
+                msg = "WARNING: Could not extract 'settings' from state to reply the 'settingsApplied'"
+                LOGGER.warning(msg)
 
         # Update myData from kwargs dict
         LOGGER.info('Updating myData object with kwargs')
@@ -279,7 +279,7 @@ class DDSController(threading.Thread):
         else:
             msg = "WARNING: Invalid Transition from: {} --> {}".format(self.State.current_state,
                                                                        self.next_state)
-            LOGGER.info(msg)
+            LOGGER.warning(msg)
             # Send the ACK
             self.mgr_ackCommand(cmdId, self.SALPY_lib.SAL__CMD_NOPERM, 0, msg)
 
@@ -398,17 +398,18 @@ class DDSSubcriber(threading.Thread):
             time.sleep(self.tsleep)
         return
 
-    def getCurrent(self):
+    def getCurrent(self,getNone=False):
         if len(self.myDatalist) > 0:
             Current = self.myDatalist[-1]
             self.newTelem = False
             self.newEvent = False
         else:
-            # Current = None
-            # For now we're passing the empty value of the object, we might want to revise this in the future
-            LOGGER.info(
-                "WARNING: No value received for: '{}' yet, sending empty object anyway".format(self.topic))
-            Current = self.myData
+            if getNone:
+                Current = None
+            else:
+                Current = self.myData
+            msg = "No value received for topic: '{}'".format(self.topic)
+            LOGGER.warning(msg)
         return Current
 
     def getCurrentTelemetry(self):
@@ -433,7 +434,7 @@ class DDSSubcriber(threading.Thread):
             sys.stdout.write("Wating for %s event.. [%s]" % (self.topic, next(spinner)))
             sys.stdout.write('\r')
             if time.time() - t0 > timeout:
-                LOGGER.info("WARNING: Timeout reading for Event %s" % self.topic)
+                LOGGER.warning("Timeout reading for Event %s" % self.topic)
                 self.newEvent = False
                 break
             time.sleep(tsleep)
