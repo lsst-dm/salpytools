@@ -141,8 +141,7 @@ class DeviceState:
             try:
                 self.myData[eventname].settings = self.settings
             except Exception:
-                msg = "WARNING: Could not extract 'settings' from state to reply the 'settingsApplied'"
-                LOGGER.warning(msg)
+                LOGGER.warning("Could not extract 'settings' from state to reply the 'settingsApplied'")
 
         # Update myData from kwargs dict
         LOGGER.info('Updating myData object with kwargs')
@@ -398,7 +397,7 @@ class DDSSubcriber(threading.Thread):
             time.sleep(self.tsleep)
         return
 
-    def getCurrent(self,getNone=False):
+    def getCurrent(self, getNone=False):
         if len(self.myDatalist) > 0:
             Current = self.myDatalist[-1]
             self.newTelem = False
