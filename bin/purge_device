@@ -9,7 +9,7 @@ def cmdline():
     parser = argparse.ArgumentParser(description="Purge SAL Command Messages for a CSC Device")
 
     # The optional arguments
-    parser.add_argument("-d", "--Device", action="store", default='atHeaderService',
+    parser.add_argument("-d", "--Device", action="store", default='ATHeaderService',
                         help="Name of Device")
     parser.add_argument('-c', "--commands", nargs='+',
                         help='List of command to clear')
