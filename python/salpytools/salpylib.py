@@ -124,13 +124,12 @@ class DeviceState:
         """
 
         LOGGER.info('Loading up the SummaryState and DetailedState enumerations for {}'.format(self.Device))
-        self.summaryState_enum = {}
         self.detailedState_enum = {}
         for name in states.state_names:
-            self.summaryState_enum[name] = getattr(self.SALPY_lib, "{}_shared_SummaryState_{}State"
-                                                   .format(self.Device, name.capitalize()))
             self.detailedState_enum[name] = getattr(self.SALPY_lib, "{}_shared_DetailedState_{}State"
                                                     .format(self.Device, name.capitalize()))
+
+            print(name, self.detailedState_enum[name])
 
     def subscribe_list(self, eventlist):
         # Subscribe to list of logEvents
@@ -150,7 +149,7 @@ class DeviceState:
 
         # Populate myData with the default cases
         if eventname == 'summaryState':
-            self.myData[eventname].summaryState = self.summaryState_enum[self.current_state]
+            self.myData[eventname].summaryState = self.detailedState_enum[self.current_state]
         if eventname == 'rejectedCommand':
             rejected_state = kwargs.get('rejected_state')
             next_state = states.next_state[rejected_state]
@@ -624,7 +623,7 @@ def update_myData(myData, **kwargs):
     return myData
 
 
-def command_sequencer(commands, Device='atHeaderService', wait_time=1, sleep_time=3):
+def command_sequencer(commands, Device='ATHeaderService', wait_time=1, sleep_time=3):
     """
     Stand-alone function to send a sequence of OCS Commands
     """
