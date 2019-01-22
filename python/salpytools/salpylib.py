@@ -398,12 +398,15 @@ class DDSSubcriber(threading.Thread):
         return
 
     def run_Event(self):
+        self.timeoutEvent = False
         while True:
             retval = self.getEvent(self.myData)
             if retval == 0:
                 self.myDatalist.append(self.myData)
                 self.myDatalist = self.myDatalist[-self.nkeep:]  # Keep only nkeep entries
                 self.newEvent = True
+                # Capture the current timeStamp
+                self.timeStamp = self.myData.timeStamp
             time.sleep(self.tsleep)
         return
 
@@ -453,9 +456,12 @@ class DDSSubcriber(threading.Thread):
             sys.stdout.write("Wating for %s event.. [%s]" % (self.topic, next(spinner)))
             sys.stdout.write('\r')
             if time.time() - t0 > timeout:
-                LOGGER.warning("Timeout reading for Event %s" % self.topic)
+                LOGGER.warning("Timeout waiting for Event %s" % self.topic)
                 self.newEvent = False
+                self.timeoutEvent = True
                 break
+            else:
+                self.timeoutEvent = False
             time.sleep(tsleep)
         return self.newEvent
 
