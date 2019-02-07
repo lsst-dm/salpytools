@@ -753,7 +753,7 @@ def purge_csc(csc_name, topic_name, ctype='command',sleep=0.5):
     elif ctype == 'event':
         purge_event(csc_name, topic_name, sleep=sleep)
     elif ctype == 'telem':
-        purge_event(csc_name, topic_name, sleep=sleep)
+        purge_telem(csc_name, topic_name, sleep=sleep)
     else:
         print("WARNING: CSC type not recognize, [command,event,telem]")
     return
