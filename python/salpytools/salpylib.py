@@ -129,7 +129,7 @@ class DeviceState:
             self.detailedState_enum[name] = getattr(self.SALPY_lib, "{}_shared_DetailedState_{}State"
                                                     .format(self.Device, name.capitalize()))
 
-            print(name, self.detailedState_enum[name])
+            LOGGER.info("name: {0:10s} -- number: {1:2d}".format(name, self.detailedState_enum[name]))
 
     def subscribe_list(self, eventlist):
         # Subscribe to list of logEvents
@@ -398,12 +398,16 @@ class DDSSubcriber(threading.Thread):
         return
 
     def run_Event(self):
+        self.timeoutEvent = False
         while True:
             retval = self.getEvent(self.myData)
             if retval == 0:
                 self.myDatalist.append(self.myData)
                 self.myDatalist = self.myDatalist[-self.nkeep:]  # Keep only nkeep entries
                 self.newEvent = True
+                # Capture the current timeStamp only if defined as an attribute!
+                if hasattr(self.myData, 'timeStamp'):
+                    self.timeStamp = self.myData.timeStamp
             time.sleep(self.tsleep)
         return
 
@@ -440,24 +444,75 @@ class DDSSubcriber(threading.Thread):
     def getCurrentCommand(self):
         return self.getCurrent()
 
-    def waitEvent(self, tsleep=None, timeout=None):
-        """ Loop for waiting for new event """
+    def waitEvent(self, tsleep=None, timeout=None, after_timeStamp=-1):
+        """
+        Loop while waiting for a new event.
+
+        This function waits until the class gets a new event via the
+        variable self.newEvent. self.newEvent is controlled by the run_Event function.
+        - Once self.newEvent changes to True, the function makes sure that the timeStamp
+        in this new event happened AFTER the after_timeStamp time set in the function call. This
+        ensures that no rogue newEvent triggered the wait. If this is a bona-fide new Event, then we
+        break from the loop. By default after_timeStamp=-1, to make sure dtime is positive in case
+        that after_timeStamp is not defined.
+        - If the time inside the wait loop exceeds the timeout set time, then the function breaks
+        from the loop and returns self.timeoutEvent=True and self.newEvent=False
+        """
         if not tsleep:
             tsleep = self.tsleep
         if not timeout:
             timeout = self.timeout
 
         t0 = time.time()
-        while not self.newEvent:
+        self.timeoutEvent = False
+
+        while True:
             sys.stdout.flush()
-            sys.stdout.write("Wating for %s event.. [%s]" % (self.topic, next(spinner)))
+            sys.stdout.write("Waiting for {} event.. [{}]".format(self.topic, next(spinner)))
             sys.stdout.write('\r')
-            if time.time() - t0 > timeout:
-                LOGGER.warning("Timeout reading for Event %s" % self.topic)
+            if self.newEvent:
+                # Make sure that self.newEvent happens AFTER the time stamp requested time
+                rogueEvent = self.check_rogueEvent(after_timeStamp)
+                if rogueEvent:
+                    LOGGER.warning("Received Rogue {} Event -- will keep waiting".format(self.topic))
+                    self.newEvent = False
+                else:
+                    LOGGER.info("Received New {} Event -- stop waiting".format(self.topic))
+                    break
+            elif time.time() - t0 > timeout:
+                LOGGER.warning("Timeout waiting for Event %s" % self.topic)
                 self.newEvent = False
+                self.timeoutEvent = True
                 break
+            else:
+                self.timeoutEvent = False
             time.sleep(tsleep)
+
         return self.newEvent
+
+    def check_rogueEvent(self, after_timeStamp):
+        """
+        Check for rogue events that occurrs in the past.
+        Make sure that self.newEvent happens AFTER the time stamp requested time.
+        If after_timeStamp is < 0, we do not check for rogue events
+        """
+        # Only check if after_timeStamp is > 0
+        if after_timeStamp < 0:
+            rogueEvent = False
+            return rogueEvent
+        # Make sure that the Event has the timeStamp attribute
+        if hasattr(self, 'timeStamp'):
+            # Make sure that self.newEvent happens AFTER the time stamp requested time
+            dtime = self.timeStamp - after_timeStamp
+            if dtime < 0:
+                rogueEvent = True
+            else:
+                rogueEvent = False
+        else:
+            LOGGER.warning("New Event: {} has not timeStamp".format(self.topic))
+            LOGGER.warning("Cannot check for rogue timeStamp, proceeding with trepidation")
+            rogueEvent = False
+        return rogueEvent
 
     def resetEvent(self):
         """ Simple function to set it back"""
@@ -619,7 +674,6 @@ def update_myData(myData, **kwargs):
             setattr(myData, key, kwargs.get(key))
         else:
             LOGGER.info('key {} not in myData'.format(key))
-    # print(myData)
     return myData
 
 
