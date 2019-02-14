@@ -472,8 +472,8 @@ class DDSSubcriber(threading.Thread):
             sys.stdout.write('\r')
             if self.newEvent:
                 # Make sure that self.newEvent happens AFTER the time stamp requested time
-                dtime = self.timeStamp - after_timeStamp
-                if dtime < 0:
+                rogueEvent = self.check_rogueEvent(after_timeStamp)
+                if rogueEvent:
                     LOGGER.warning("Received Rogue {} Event -- will keep waiting".format(self.topic))
                     self.newEvent = False
                 else:
@@ -489,6 +489,30 @@ class DDSSubcriber(threading.Thread):
             time.sleep(tsleep)
 
         return self.newEvent
+
+    def check_rogueEvent(self, after_timeStamp):
+        """
+        Check for rogue events that occurrs in the past.
+        Make sure that self.newEvent happens AFTER the time stamp requested time.
+        If after_timeStamp is < 0, we do not check for rogue events
+        """
+        # Only check if after_timeStamp is > 0
+        if after_timeStamp < 0:
+            rogueEvent = False
+            return rogueEvent
+        # Make sure that the Event has the timeStamp attribute
+        if hasattr(self, 'timeStamp'):
+            # Make sure that self.newEvent happens AFTER the time stamp requested time
+            dtime = self.timeStamp - after_timeStamp
+            if dtime < 0:
+                rogueEvent = True
+            else:
+                rogueEvent = False
+        else:
+            LOGGER.warning("New Event: {} has not timeStamp".format(self.topic))
+            LOGGER.warning("Cannot check for rogue timeStamp, proceeding with trepidation")
+            rogueEvent = False
+        return rogueEvent
 
     def resetEvent(self):
         """ Simple function to set it back"""
