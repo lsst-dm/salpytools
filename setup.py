@@ -7,7 +7,7 @@ data_files = [("",["setpath.sh"])]
 
 # The main call
 setup(name='salpytools',
-      version ='OCS_IntSpecICC',
+      version ='0.9.0',
       license = "GPL",
       description = "Python tools to connect to SAL.",
       author = "LSST, Felipe Menanteau",

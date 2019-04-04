@@ -29,3 +29,10 @@ python setup.py install --prefix=$PRODUCT_DIR --install-lib=$PRODUCT_DIR/python
 # Clean up
 echo "# Cleaning up:" $INSTALL_DIR
 rm -rf $INSTALL_DIR
+
+# Remember to set the paths
+echo "# Remember to add the following line to your init config:"
+echo ""
+echo " source $PRODUCT_DIR/setpath.sh $PRODUCT_DIR"
+echo ""
+
