@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+
+from salpytools import salpylib
+import sys
+
+def cmdline():
+
+    import argparse
+    parser = argparse.ArgumentParser(description="Purge SAL Event Messages for a CSC Device")
+
+    # The optional arguments
+    parser.add_argument("-d", "--Device", action="store", default='atHeaderService',
+                        help="Name of Device")
+    parser.add_argument('-t', "--topics", nargs='+',
+                        help='List of topics to clear')
+    parser.add_argument('-c', "--ctype", choices=['command', 'event', 'telem'], required=True,
+                        help='The Type of message [command,event,telem]')
+    parser.add_argument("-a", "--all", action='store_true',
+                        help='Go through all topics')
+    args = parser.parse_args()
+
+    if args.all:
+        args.topics = find_topics(args.Device, ctype=args.ctype)
+
+    return args
+
+def find_topics(csc_name, ctype='event'):
+    SALPY_lib = salpylib.load_SALPYlib(csc_name)
+
+    if ctype == 'event':
+        pattern = '{}_logevent'.format(csc_name)
+    elif ctype == 'command':
+        pattern = '{}_command'.format(csc_name)
+    elif ctype == 'telem':
+        sys.exit("ERROR: ctype: {} not supported".format(ctype))
+    else:
+        sys.exit("ERROR: ctype: {} not supported, use: event/command/telem".format(ctype))
+
+    np = len(pattern)
+    # Get the list now:
+    topics = []
+    for key, value in SALPY_lib.__dict__.items():
+        if key[0:np] == pattern:
+            topics.append(key[np+1:-1])
+    return topics
+
+if __name__ == "__main__":
+
+    args = cmdline()
+    for topic_name in args.topics:
+        try:
+            salpylib.purge_csc(args.Device, topic_name, ctype=args.ctype, sleep=0.5)
+        except:
+            print("---------------------------------------------------------")
+            print("WARNING: Could not purge:{} for {}".format(topic_name,args.Device))
+            print("---------------------------------------------------------")

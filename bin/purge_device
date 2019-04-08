@@ -27,4 +27,7 @@ if __name__ == "__main__":
 
     args = cmdline()
     for command in args.commands:
-        salpylib.purge_command(args.Device, command)
+        try:
+            salpylib.purge_command(args.Device, command)
+        except:
+            print("WARNING: Could not purge:{}".format(command))

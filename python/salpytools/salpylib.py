@@ -713,9 +713,7 @@ def command_sequencer(commands, Device='ATHeaderService', wait_time=1, sleep_tim
     mgr.salShutdown()
     return
 
-
 def purge_command(device, command, sleep=0.5):
-
     SALPY_lib = load_SALPYlib(device)
     mgr = getattr(SALPY_lib, 'SAL_{}'.format(device))()
     mgr.salProcessor("{}_command_{}".format(device, command))
@@ -725,3 +723,39 @@ def purge_command(device, command, sleep=0.5):
     LOGGER.info("Purged: {}".format(command))
     LOGGER.info("--------------------------")
     return
+
+def purge_event(device, event, sleep=0.5):
+    SALPY_lib = load_SALPYlib(device)
+    mgr = getattr(SALPY_lib, 'SAL_{}'.format(device))()
+    mgr.salEvent("{}_logevent_{}".format(device, event))
+    LOGGER.info("Subscribing to: {}_logevent_{}".format(device, event))
+    time.sleep(sleep)
+    mgr.salShutdown()
+    LOGGER.info("Purged: {}".format(event))
+    LOGGER.info("--------------------------")
+    return
+
+def purge_telem(device, telem, sleep=0.5):
+    SALPY_lib = load_SALPYlib(device)
+    mgr = getattr(SALPY_lib, 'SAL_{}'.format(device))()
+    mgr.salTelemetryPub("{}_{}".format(device, telem))
+    LOGGER.info("Subscribing to: {}_{}".format(device, telem))
+    time.sleep(sleep)
+    mgr.salShutdown()
+    LOGGER.info("Purged: {}".format(telem))
+    LOGGER.info("--------------------------")
+    return
+
+def purge_csc(csc_name, topic_name, ctype='command',sleep=0.5):
+
+    if ctype == 'command':
+        purge_command(csc_name, topic_name, sleep=sleep)
+    elif ctype == 'event':
+        purge_event(csc_name, topic_name, sleep=sleep)
+    elif ctype == 'telem':
+        purge_telem(csc_name, topic_name, sleep=sleep)
+    else:
+        print("WARNING: CSC type not recognize, [command,event,telem]")
+    return
+
+
