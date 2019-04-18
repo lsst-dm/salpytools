@@ -150,6 +150,7 @@ class DeviceState:
         # Populate myData with the default cases
         if eventname == 'summaryState':
             self.myData[eventname].summaryState = self.detailedState_enum[self.current_state]
+
         if eventname == 'rejectedCommand':
             rejected_state = kwargs.get('rejected_state')
             next_state = states.next_state[rejected_state]
@@ -166,6 +167,8 @@ class DeviceState:
         # Update myData from kwargs dict
         LOGGER.info('Updating myData object with kwargs')
         self.myData[eventname] = update_myData(self.myData[eventname], **kwargs)
+        for key in self.myData_keys[eventname]:
+            LOGGER.info('\t{}:{}'.format(key, getattr(self.myData[eventname], key)))
 
         LOGGER.info('Sending {}'.format(eventname))
         self.logEvent[eventname](self.myData[eventname], priority)
@@ -181,7 +184,7 @@ class DeviceState:
         This step need to be done before we call send_logEvent
         """
         self.mgr[eventname] = getattr(self.SALPY_lib, 'SAL_{}'.format(self.Device))()
-        self.mgr[eventname].salEvent("{}_logevent_{}".format(self.Device, eventname))
+        self.mgr[eventname].salEventPub("{}_logevent_{}".format(self.Device, eventname))
         self.logEvent[eventname] = getattr(self.mgr[eventname], 'logEvent_{}'.format(eventname))
         self.myData[eventname] = getattr(
             self.SALPY_lib, '{}_logevent_{}C'.format(self.Device, eventname))()
@@ -359,7 +362,7 @@ class DDSSubcriber(threading.Thread):
         elif self.Stype == 'Event':
             self.myData = getattr(
                 self.SALPY_lib, '{}_logevent_{}C'.format(self.Device, self.topic))()
-            self.mgr.salEvent("{}_logevent_{}".format(self.Device, self.topic))
+            self.mgr.salEventSub("{}_logevent_{}".format(self.Device, self.topic))
             # Generic method to get for example: self.mgr.getEvent_startIntegration(event)
             self.getEvent = getattr(self.mgr, 'getEvent_{}'.format(self.topic))
             LOGGER.info("{} subscriber ready for Device:{} topic:{}".format(
@@ -629,7 +632,7 @@ class DDSSend(threading.Thread):
         # Get the logEvent object to send myData
         mgr = self.get_mgr()
         # name = "{}_logevent_{}".format(self.Device, event)
-        mgr.salEvent("{}_logevent_{}".format(self.Device, event))
+        mgr.salEventPub("{}_logevent_{}".format(self.Device, event))
         logEvent = getattr(mgr, 'logEvent_{}'.format(event))
         LOGGER.info("Sending Event: {}".format(event))
         logEvent(myData, priority)
@@ -727,7 +730,7 @@ def purge_command(device, command, sleep=0.5):
 def purge_event(device, event, sleep=0.5):
     SALPY_lib = load_SALPYlib(device)
     mgr = getattr(SALPY_lib, 'SAL_{}'.format(device))()
-    mgr.salEvent("{}_logevent_{}".format(device, event))
+    mgr.salEventSub("{}_logevent_{}".format(device, event))
     LOGGER.info("Subscribing to: {}_logevent_{}".format(device, event))
     time.sleep(sleep)
     mgr.salShutdown()
@@ -738,7 +741,7 @@ def purge_event(device, event, sleep=0.5):
 def purge_telem(device, telem, sleep=0.5):
     SALPY_lib = load_SALPYlib(device)
     mgr = getattr(SALPY_lib, 'SAL_{}'.format(device))()
-    mgr.salTelemetryPub("{}_{}".format(device, telem))
+    mgr.salTelemetrySub("{}_{}".format(device, telem))
     LOGGER.info("Subscribing to: {}_{}".format(device, telem))
     time.sleep(sleep)
     mgr.salShutdown()
