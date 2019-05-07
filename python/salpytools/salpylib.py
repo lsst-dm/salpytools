@@ -96,10 +96,10 @@ class DeviceState:
     def __init__(self, Device='atHeaderService', default_state='OFFLINE',
                  tsleep=0.5,
                  eventlist=['summaryState',
-                              'settingVersions',
-                              'rejectedCommand',
-                              'settingsApplied',
-                              'appliedSettingsMatchStart']):
+                            'settingVersions',
+                            'rejectedCommand',
+                            'settingsApplied',
+                            'appliedSettingsMatchStart']):
 
         self.current_state = default_state
         self.tsleep = tsleep
@@ -113,7 +113,11 @@ class DeviceState:
         # Subscribe to all events in list
         self.subscribe_list(eventlist)
         # Get the enumeration of the states from the library
-        self.load_state_enumeration()
+        try:
+            self.load_state_enumeration()
+        except Exception:
+            LOGGER.warning("Cannot load state enumeration -- will use library instead")
+            self.detailedState_enum = states.state_enumeration
 
     def load_state_enumeration(self):
         """
@@ -716,6 +720,7 @@ def command_sequencer(commands, Device='ATHeaderService', wait_time=1, sleep_tim
     mgr.salShutdown()
     return
 
+
 def purge_command(device, command, sleep=0.5):
     SALPY_lib = load_SALPYlib(device)
     mgr = getattr(SALPY_lib, 'SAL_{}'.format(device))()
@@ -726,6 +731,7 @@ def purge_command(device, command, sleep=0.5):
     LOGGER.info("Purged: {}".format(command))
     LOGGER.info("--------------------------")
     return
+
 
 def purge_event(device, event, sleep=0.5):
     SALPY_lib = load_SALPYlib(device)
@@ -738,6 +744,7 @@ def purge_event(device, event, sleep=0.5):
     LOGGER.info("--------------------------")
     return
 
+
 def purge_telem(device, telem, sleep=0.5):
     SALPY_lib = load_SALPYlib(device)
     mgr = getattr(SALPY_lib, 'SAL_{}'.format(device))()
@@ -749,7 +756,8 @@ def purge_telem(device, telem, sleep=0.5):
     LOGGER.info("--------------------------")
     return
 
-def purge_csc(csc_name, topic_name, ctype='command',sleep=0.5):
+
+def purge_csc(csc_name, topic_name, ctype='command', sleep=0.5):
 
     if ctype == 'command':
         purge_command(csc_name, topic_name, sleep=sleep)
@@ -760,5 +768,3 @@ def purge_csc(csc_name, topic_name, ctype='command',sleep=0.5):
     else:
         print("WARNING: CSC type not recognize, [command,event,telem]")
     return
-
-
