@@ -130,8 +130,10 @@ class DeviceState:
         LOGGER.info('Loading up the SummaryState and DetailedState enumerations for {}'.format(self.Device))
         self.detailedState_enum = {}
         for name in states.state_names:
-            self.detailedState_enum[name] = getattr(self.SALPY_lib, "{}_shared_DetailedState_{}State"
-                                                    .format(self.Device, name.capitalize()))
+
+            # we get for example: SALPY_ATCamera.SAL__STATE_DISABLED
+            self.detailedState_enum[name] = getattr(self.SALPY_lib, "SAL__STATE_{}"
+                                                    .format(name.upper()))
 
             LOGGER.info("name: {0:10s} -- number: {1:2d}".format(name, self.detailedState_enum[name]))
 
