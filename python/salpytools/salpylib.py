@@ -53,18 +53,8 @@ module are:
 
 spinner = itertools.cycle(['-', '/', '|', '\\'])
 
-
-def create_logger(level=logging.NOTSET, name='default'):
-    """ Simple Logger """
-    logging.basicConfig(level=level,
-                        format='[%(asctime)s] [%(levelname)s] %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S')
-    logger = logging.getLogger(name)
-    return logger
-
-
 # Create a logger for all functions
-LOGGER = create_logger(level=logging.NOTSET, name='SALPYLIB')
+LOGGER = logging.getLogger(__name__)
 
 
 def load_SALPYlib(Device):
