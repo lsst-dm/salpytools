@@ -87,7 +87,6 @@ class DeviceState:
                  tsleep=0.5,
                  eventlist=['summaryState',
                             'settingVersions',
-                            'rejectedCommand',
                             'settingsApplied',
                             'appliedSettingsMatchStart']):
 
@@ -107,25 +106,24 @@ class DeviceState:
             self.load_state_enumeration()
         except Exception:
             LOGGER.warning("Cannot load state enumeration -- will use library instead")
-            self.detailedState_enum = states.state_enumeration
+            self.summaryState_enum = states.state_enumeration
 
     def load_state_enumeration(self):
         """
-        Load up into dictionaries the SummaryState and DetailedState
+        Load up into dictionaries the SummaryState
         enumeration by getting the attributes of the shape
-        'atHeaderService_shared_SummaryState_DisabledState' and
-        'atHeaderService_shared_DetailedState_DisabledState' for example
+        'SALPY_ATCamera.SAL__STATE_DISABLED'
         """
 
-        LOGGER.info('Loading up the SummaryState and DetailedState enumerations for {}'.format(self.Device))
-        self.detailedState_enum = {}
+        LOGGER.info('Loading up the SummaryState enumerations for {}'.format(self.Device))
+        self.summaryState_enum = {}
         for name in states.state_names:
 
             # we get for example: SALPY_ATCamera.SAL__STATE_DISABLED
-            self.detailedState_enum[name] = getattr(self.SALPY_lib, "SAL__STATE_{}"
+            self.summaryState_enum[name] = getattr(self.SALPY_lib, "SAL__STATE_{}"
                                                     .format(name.upper()))
 
-            LOGGER.info("name: {0:10s} -- number: {1:2d}".format(name, self.detailedState_enum[name]))
+            LOGGER.info("name: {0:10s} -- number: {1:2d}".format(name, self.summaryState_enum[name]))
 
     def subscribe_list(self, eventlist):
         # Subscribe to list of logEvents
@@ -145,14 +143,7 @@ class DeviceState:
 
         # Populate myData with the default cases
         if eventname == 'summaryState':
-            self.myData[eventname].summaryState = self.detailedState_enum[self.current_state]
-
-        if eventname == 'rejectedCommand':
-            rejected_state = kwargs.get('rejected_state')
-            next_state = states.next_state[rejected_state]
-            # CHECK THIS OUT -- DM-15860
-            self.myData[eventname].commandValue = states.state_enumeration[next_state]
-            self.myData[eventname].detailedState = self.detailedState_enum[self.current_state]
+            self.myData[eventname].summaryState = self.summaryState_enum[self.current_state]
 
         if eventname == 'settingsApplied':
             try:
