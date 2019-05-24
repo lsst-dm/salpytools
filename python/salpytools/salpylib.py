@@ -106,24 +106,24 @@ class DeviceState:
             self.load_state_enumeration()
         except Exception:
             LOGGER.warning("Cannot load state enumeration -- will use library instead")
-            self.State_enum = states.state_enumeration
+            self.summaryState_enum = states.state_enumeration
 
     def load_state_enumeration(self):
         """
-        Load up into dictionaries the State
+        Load up into dictionaries the SummaryState
         enumeration by getting the attributes of the shape
         'SALPY_ATCamera.SAL__STATE_DISABLED'
         """
 
         LOGGER.info('Loading up the SummaryState enumerations for {}'.format(self.Device))
-        self.State_enum = {}
+        self.summaryState_enum = {}
         for name in states.state_names:
 
             # we get for example: SALPY_ATCamera.SAL__STATE_DISABLED
-            self.State_enum[name] = getattr(self.SALPY_lib, "SAL__STATE_{}"
+            self.summaryState_enum[name] = getattr(self.SALPY_lib, "SAL__STATE_{}"
                                                     .format(name.upper()))
 
-            LOGGER.info("name: {0:10s} -- number: {1:2d}".format(name, self.State_enum[name]))
+            LOGGER.info("name: {0:10s} -- number: {1:2d}".format(name, self.summaryState_enum[name]))
 
     def subscribe_list(self, eventlist):
         # Subscribe to list of logEvents
@@ -143,7 +143,7 @@ class DeviceState:
 
         # Populate myData with the default cases
         if eventname == 'summaryState':
-            self.myData[eventname].summaryState = self.State_enum[self.current_state]
+            self.myData[eventname].summaryState = self.summaryState_enum[self.current_state]
 
         if eventname == 'settingsApplied':
             try:
