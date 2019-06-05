@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+
+from salpytools import salpylib
+import logging
+import inspect
+import sys
+import time
+from datetime import datetime
+
+
+def cmdline():
+
+    import argparse
+    parser = argparse.ArgumentParser(description="Purge SAL Event Messages for a CSC Device")
+
+    # The optional arguments
+    parser.add_argument("-d", "--Device", action="store", default='atHeaderService',
+                        help="Name of Device")
+    parser.add_argument('-t', "--topics", nargs='+',
+                        help='List of topics to clear')
+    parser.add_argument('-c', "--ctype", choices=['Command', 'Event', 'Telemetry'], required=True,
+                        help='The Type of message [Command,Event,Telemetry]')
+    parser.add_argument("-a", "--all", action='store_true',
+                        help='Go through all topics')
+    parser.add_argument("-w", "--waittime", default=3,
+                        help='Wait Time')
+
+    args = parser.parse_args()
+
+    if args.all:
+        args.topics = find_topics(args.Device, ctype=args.ctype)
+
+    return args
+
+
+def find_topics(csc_name, ctype='Event'):
+    SALPY_lib = salpylib.load_SALPYlib(csc_name)
+
+    if ctype == 'Event':
+        pattern = '{}_logevent'.format(csc_name)
+    elif ctype == 'Command':
+        pattern = '{}_command'.format(csc_name)
+    elif ctype == 'Telemetry':
+        sys.exit("ERROR: ctype: {} not supported".format(ctype))
+    else:
+        sys.exit("ERROR: ctype: {} not supported, use: event/command/telem".format(ctype))
+
+    np = len(pattern)
+    # Get the list now:
+    topics = []
+    for key, value in SALPY_lib.__dict__.items():
+        if key[0:np] == pattern:
+            topics.append(key[np+1:-1])
+    return topics
+
+
+if __name__ == "__main__":
+
+    # Define some logging
+    LOGGER = logging.getLogger(__name__)
+    FORMAT = '[%(asctime)s][%(levelname)s][%(name)s][%(funcName)s] %(message)s'
+    FORMAT_DATE = '%Y-%m-%d %H:%M:%S'
+    formatter = logging.Formatter(FORMAT, FORMAT_DATE)
+    logging.basicConfig(level=logging.NOTSET,
+                        format=FORMAT,
+                        datefmt=FORMAT_DATE)
+
+    args = cmdline()
+    for topic_name in args.topics:
+
+        SALconn = salpylib.DDSSubcriber(args.Device, topic_name, Stype=args.ctype, tsleep=0.1)
+        SALconn.start()
+        time.sleep(args.waittime)  # Give it some time to catchup
+        myData = SALconn.getCurrent(getNone=True)
+        print("There are: {} mesaage(s) stored".format(len(SALconn.myDatalist)))
+        if myData is None:
+            print("---------------------------------------------------------")
+            print("WARNING: myData is None: {} for {}".format(topic_name, args.Device))
+            print("---------------------------------------------------------")
+        else:
+            myData_keys = [a[0] for a in inspect.getmembers(myData) if not(
+                a[0].startswith('__') and a[0].endswith('__'))]
+            print("Payload [myData] for type: {} -- {}_{}".format(args.ctype, args.Device, topic_name))
+            for key in myData_keys:
+                if key.lower() == 'timestamp':
+                    timestamp = getattr(myData, key)
+                    formatstamp = datetime.fromtimestamp(timestamp).isoformat()
+                    print("   {}:{}".format(key, formatstamp))
+                else:
+                    print("   {}:{}".format(key, getattr(myData, key)))
