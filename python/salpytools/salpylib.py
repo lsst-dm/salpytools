@@ -35,7 +35,7 @@ module are:
 
 - DDSController: Subscribe and acknowleges Commands for a Device
   (threaded)
-- DDSSubcriber: Subscribe to Command/Telemetry/Event topics for a
+- DDSSubscriber: Subscribe to Command/Telemetry/Event topics for a
   Device (threaded)
 - DDSSend: Generates/send Telemetry, Events or Commands for a Device
   (non-threaded)
@@ -189,7 +189,7 @@ class DDSController(threading.Thread):
 
     """
     Class to subscribe and react to Commands for a Device.
-    This class is very similar to DDSSubcriber, but the difference is
+    This class is very similar to DDSSubscriber, but the difference is
     that this one can send the acks to the Commands.
     """
 
@@ -307,7 +307,7 @@ def validate_transition(current_state, new_state):
     return transition_is_valid
 
 
-class DDSSubcriber(threading.Thread):
+class DDSSubscriber(threading.Thread):
 
     """ Class to Subscribe to Telemetry, it could a Command (discouraged), Event or Telemetry"""
 
