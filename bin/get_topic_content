@@ -68,11 +68,11 @@ if __name__ == "__main__":
     args = cmdline()
     for topic_name in args.topics:
 
-        SALconn = salpylib.DDSSubcriber(args.Device, topic_name, Stype=args.ctype, tsleep=0.1)
+        SALconn = salpylib.DDSSubscriber(args.Device, topic_name, Stype=args.ctype, tsleep=0.1)
         SALconn.start()
         time.sleep(args.waittime)  # Give it some time to catchup
         myData = SALconn.getCurrent(getNone=True)
-        print("There are: {} mesaage(s) stored".format(len(SALconn.myDatalist)))
+        print("There are: {} message(s) stored".format(len(SALconn.myDatalist)))
         if myData is None:
             print("---------------------------------------------------------")
             print("WARNING: myData is None: {} for {}".format(topic_name, args.Device))
