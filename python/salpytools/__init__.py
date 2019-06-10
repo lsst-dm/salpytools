@@ -20,7 +20,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 __author__  = "LSST/Felipe Menanteau"
-__version__ = '0.9.5'
+__version__ = '0.9.7'
 version = __version__
 
 from .salpylib import DeviceState
